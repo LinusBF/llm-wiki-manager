@@ -21,6 +21,10 @@ public struct QueueItem: Codable, Identifiable, Equatable {
     public var lastError: String?
     public var wikiPagesUpdated: Int?
     public var durationSeconds: Double?
+    public var queuedDurationSeconds: Double?
+    public var modelName: String?
+    public var reasoningEffort: ReasoningEffort?
+    public var ingestDepth: IngestDepth?
 
     public init(
         id: UUID = UUID(),
@@ -34,7 +38,11 @@ public struct QueueItem: Codable, Identifiable, Equatable {
         nextRunAt: Date? = nil,
         lastError: String? = nil,
         wikiPagesUpdated: Int? = nil,
-        durationSeconds: Double? = nil
+        durationSeconds: Double? = nil,
+        queuedDurationSeconds: Double? = nil,
+        modelName: String? = nil,
+        reasoningEffort: ReasoningEffort? = nil,
+        ingestDepth: IngestDepth? = nil
     ) {
         self.id = id
         self.filePath = filePath
@@ -48,6 +56,10 @@ public struct QueueItem: Codable, Identifiable, Equatable {
         self.lastError = lastError
         self.wikiPagesUpdated = wikiPagesUpdated
         self.durationSeconds = durationSeconds
+        self.queuedDurationSeconds = queuedDurationSeconds
+        self.modelName = modelName
+        self.reasoningEffort = reasoningEffort
+        self.ingestDepth = ingestDepth
     }
 
     public var sourceURL: URL {

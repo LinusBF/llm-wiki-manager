@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ProcessOutputLine: Equatable {
+public struct ProcessOutputLine: Equatable, Sendable {
     public var timestamp: Date
     public var stream: String
     public var text: String
@@ -12,7 +12,7 @@ public struct ProcessOutputLine: Equatable {
     }
 }
 
-public struct ProcessRunResult: Equatable {
+public struct ProcessRunResult: Equatable, Sendable {
     public var exitCode: Int32
     public var durationSeconds: Double
 
@@ -36,7 +36,7 @@ public enum ProcessRunnerError: LocalizedError {
     }
 }
 
-public final class ProcessRunner {
+public final class ProcessRunner: @unchecked Sendable {
     private let lock = NSLock()
     private var runningProcess: Process?
 

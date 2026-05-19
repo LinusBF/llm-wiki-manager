@@ -18,7 +18,6 @@ final class WikiIngestService: ObservableObject {
     @Published private(set) var statusLine = "Setup needed"
     @Published private(set) var queue: [QueueItem] = []
     @Published private(set) var recent: [QueueItem] = []
-    @Published private(set) var lastOutputLines: [ProcessOutputLine] = []
     @Published private(set) var currentItem: QueueItem?
     @Published private(set) var isPaused = false
 
@@ -27,6 +26,7 @@ final class WikiIngestService: ObservableObject {
     private let watcher = RawFolderWatcher()
     private let scanner = SourceScanner()
     private let runner = ProcessRunner()
+    private let outputBuffer = OutputLineBuffer()
     private var logger: OperationalLogger?
     private var isProcessing = false
     private var retryTask: Task<Void, Never>?
@@ -61,6 +61,10 @@ final class WikiIngestService: ObservableObject {
 
     var hasAnyAgentInstalled: Bool {
         AgentID.allCases.contains { settings.binaryURL(for: $0) != nil }
+    }
+
+    var lastOutputLines: [ProcessOutputLine] {
+        outputBuffer.snapshot()
     }
 
     func start() {
@@ -286,61 +290,89 @@ final class WikiIngestService: ObservableObject {
         }
 
         let mode = settings.permissionMode(for: item.agentId)
+        let modelName = settings.modelName(for: item.agentId)
+        let reasoningEffort = settings.reasoningEffort(for: item.agentId)
+        let ingestDepth = settings.ingestDepth
         let prompt = renderedPrompt(for: item.sourceURL, paths: paths)
         let invocation = item.agentId.adapter.makeIngestInvocation(
             binary: binary,
             vaultRoot: paths.vaultRoot,
             prompt: prompt,
             permissionMode: mode,
-            modelName: settings.modelName(for: item.agentId),
-            reasoningEffort: settings.reasoningEffort(for: item.agentId)
+            modelName: modelName,
+            reasoningEffort: reasoningEffort
         )
 
         item.status = .running
         item.attempts += 1
-        item.startedAt = Date()
+        let startedAt = Date()
+        item.startedAt = startedAt
+        item.queuedDurationSeconds = startedAt.timeIntervalSince(item.createdAt)
+        item.modelName = modelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : modelName
+        item.reasoningEffort = reasoningEffort
+        item.ingestDepth = ingestDepth
         item.lastError = nil
         queue[index] = item
         currentItem = item
         isProcessing = true
         runtimeState = .ingesting
-        lastOutputLines.removeAll()
+        outputBuffer.clear()
         persistState()
         refreshStatus()
 
         let logger = logger
-        let beforeSnapshot = WikiDirectorySnapshot(wikiURL: paths.wiki)
+        let runner = runner
+        let outputBuffer = outputBuffer
+        let itemID = item.id
+        let agentID = item.agentId
+        let relativeFile = paths.relativePath(for: item.sourceURL)
+        let vaultRoot = paths.vaultRoot
+        let wikiURL = paths.wiki
 
-        Task {
-            let result: Result<ProcessRunResult, Error>
-            do {
-                let runResult = try await runner.run(
-                    invocation: invocation,
-                    currentDirectory: paths.vaultRoot
-                ) { [weak self] line in
-                    Task { @MainActor in
-                        self?.record(line: line, item: item, paths: paths)
-                    }
-                    Task {
-                        await logger?.append(
-                            OperationalLogRecord(
-                                timestamp: line.timestamp,
-                                agentId: item.agentId,
-                                file: paths.relativePath(for: item.sourceURL),
-                                stream: line.stream,
-                                message: line.text
+        Task { [weak self] in
+            let outcome = await Task.detached(priority: .utility) {
+                let beforeSnapshot = WikiDirectorySnapshot(wikiURL: wikiURL)
+                let result: Result<ProcessRunResult, Error>
+                do {
+                    let runResult = try await runner.run(
+                        invocation: invocation,
+                        currentDirectory: vaultRoot
+                    ) { line in
+                        outputBuffer.append(line)
+                        Task {
+                            await logger?.append(
+                                OperationalLogRecord(
+                                    timestamp: line.timestamp,
+                                    agentId: agentID,
+                                    file: relativeFile,
+                                    stream: line.stream,
+                                    message: line.text
+                                )
                             )
-                        )
+                        }
                     }
+                    result = .success(runResult)
+                } catch {
+                    result = .failure(error)
                 }
-                result = .success(runResult)
-            } catch {
-                result = .failure(error)
-            }
 
-            await MainActor.run {
-                self.finish(itemID: item.id, result: result, paths: paths, beforeSnapshot: beforeSnapshot)
-            }
+                let wikiPagesUpdated: Int?
+                if case let .success(runResult) = result, runResult.exitCode == 0 {
+                    wikiPagesUpdated = WikiDirectorySnapshot(wikiURL: wikiURL)
+                        .changedFileCount(comparedTo: beforeSnapshot)
+                } else {
+                    wikiPagesUpdated = nil
+                }
+
+                return (result, wikiPagesUpdated)
+            }.value
+
+            self?.finish(
+                itemID: itemID,
+                result: outcome.0,
+                paths: paths,
+                wikiPagesUpdated: outcome.1
+            )
         }
     }
 
@@ -348,7 +380,7 @@ final class WikiIngestService: ObservableObject {
         itemID: UUID,
         result: Result<ProcessRunResult, Error>,
         paths: WikiPaths,
-        beforeSnapshot: WikiDirectorySnapshot
+        wikiPagesUpdated: Int?
     ) {
         guard let index = queue.firstIndex(where: { $0.id == itemID }) else {
             isProcessing = false
@@ -364,7 +396,7 @@ final class WikiIngestService: ObservableObject {
         case let .success(runResult) where runResult.exitCode == 0:
             item.status = .succeeded
             item.durationSeconds = runResult.durationSeconds
-            item.wikiPagesUpdated = WikiDirectorySnapshot(wikiURL: paths.wiki).changedFileCount(comparedTo: beforeSnapshot)
+            item.wikiPagesUpdated = wikiPagesUpdated
             do {
                 try Data().write(to: paths.markerFile(for: item.sourceURL), options: .atomic)
                 queue.remove(at: index)
@@ -471,13 +503,6 @@ final class WikiIngestService: ObservableObject {
 
         \(settings.ingestDepth.promptDirective)
         """
-    }
-
-    private func record(line: ProcessOutputLine, item: QueueItem, paths: WikiPaths) {
-        lastOutputLines.append(line)
-        if lastOutputLines.count > 200 {
-            lastOutputLines.removeFirst(lastOutputLines.count - 200)
-        }
     }
 
     private func loadPersistedState(from paths: WikiPaths) {

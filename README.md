@@ -62,3 +62,12 @@ codex exec --skip-git-repo-check --sandbox workspace-write [--model gpt-5.4-mini
 ```
 
 The app sets the subprocess working directory to the vault root so each agent finds its own schema file automatically.
+
+## Runtime Visibility
+
+The agent process runs from a background utility task so ingestion work does not share the menu bar UI actor. The menu includes:
+
+- `Agent messages` — last five stdout/stderr lines from the active agent.
+- `Ingest stats` — current and recent ingest metadata, including agent, model, ingest mode, reasoning effort, queue time, run time, attempts, and wiki pages updated.
+
+The same ingest stats are persisted in `.llm-wiki/state.json` for crash recovery and recent-history display.

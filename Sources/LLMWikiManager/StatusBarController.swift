@@ -97,6 +97,10 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         messagesItem.submenu = makeAgentMessagesMenu()
         menu.addItem(messagesItem)
 
+        let statsItem = NSMenuItem(title: "Ingest stats", action: nil, keyEquivalent: "")
+        statsItem.submenu = makeIngestStatsMenu()
+        menu.addItem(statsItem)
+
         menu.addItem(title: "Open vault in Finder", action: #selector(openVault), target: self)
         menu.addItem(title: "Open log", action: #selector(openLog), target: self)
         menu.addItem(.separator())
@@ -130,6 +134,64 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         }
 
         return menu
+    }
+
+    private func makeIngestStatsMenu() -> NSMenu {
+        let menu = NSMenu()
+
+        if let currentItem = service.currentItem {
+            menu.addDisabledItem(title: "Current")
+            addStats(for: currentItem, to: menu, includeFilename: true)
+            menu.addItem(.separator())
+        }
+
+        let recentItems = service.recent.prefix(5)
+        if recentItems.isEmpty {
+            if service.currentItem == nil {
+                menu.addDisabledItem(title: "No ingest stats yet")
+            }
+            return menu
+        }
+
+        menu.addDisabledItem(title: "Recent")
+        for item in recentItems {
+            addStats(for: item, to: menu, includeFilename: true)
+            if item.id != recentItems.last?.id {
+                menu.addItem(.separator())
+            }
+        }
+
+        return menu
+    }
+
+    private func addStats(for item: QueueItem, to menu: NSMenu, includeFilename: Bool) {
+        if includeFilename {
+            menu.addDisabledItem(title: item.sourceURL.lastPathComponent.menuPreview)
+        }
+        menu.addDisabledItem(title: "Agent: \(item.agentId.displayName)")
+        menu.addDisabledItem(title: "Model: \(item.modelDisplayName)")
+        menu.addDisabledItem(title: "Mode: \(item.ingestDepth?.displayName ?? "Unknown")")
+        menu.addDisabledItem(title: "Reasoning: \(item.reasoningEffort?.displayName ?? "System default")")
+        menu.addDisabledItem(title: "Queued: \(formatDuration(item.effectiveQueuedDuration))")
+        menu.addDisabledItem(title: "Run: \(formatDuration(item.effectiveRunDuration))")
+        menu.addDisabledItem(title: "Attempts: \(item.attempts)")
+        if let wikiPagesUpdated = item.wikiPagesUpdated {
+            menu.addDisabledItem(title: "Wiki pages updated: \(wikiPagesUpdated)")
+        }
+        if let lastError = item.lastError, item.status == .failed {
+            menu.addDisabledItem(title: "Error: \(lastError.menuPreview)")
+        }
+    }
+
+    private func formatDuration(_ duration: TimeInterval?) -> String {
+        guard let duration else { return "n/a" }
+        let clamped = max(0, duration)
+        if clamped < 60 {
+            return String(format: "%.1fs", clamped)
+        }
+        let minutes = Int(clamped) / 60
+        let seconds = Int(clamped) % 60
+        return "\(minutes)m \(seconds)s"
     }
 
     private func updateIcon() {
@@ -226,5 +288,30 @@ private extension String {
 
         guard flattened.count > 100 else { return flattened }
         return "\(flattened.prefix(97))..."
+    }
+}
+
+private extension QueueItem {
+    var modelDisplayName: String {
+        let trimmed = modelName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? "System default" : trimmed
+    }
+
+    var effectiveQueuedDuration: TimeInterval? {
+        if let queuedDurationSeconds {
+            return queuedDurationSeconds
+        }
+        if let startedAt {
+            return startedAt.timeIntervalSince(createdAt)
+        }
+        return Date().timeIntervalSince(createdAt)
+    }
+
+    var effectiveRunDuration: TimeInterval? {
+        if let durationSeconds {
+            return durationSeconds
+        }
+        guard status == .running, let startedAt else { return nil }
+        return Date().timeIntervalSince(startedAt)
     }
 }

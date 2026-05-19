@@ -74,6 +74,30 @@ struct PreferencesView: View {
 
     private var ingestionTab: some View {
         Form {
+            Section("Agent Options") {
+                Picker("Ingest mode", selection: $settings.ingestDepth) {
+                    ForEach(IngestDepth.allCases) { depth in
+                        Text(depth.displayName).tag(depth)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                TextField("Model", text: Binding(
+                    get: { settings.modelName(for: settings.activeAgentID) },
+                    set: { settings.setModelName($0, for: settings.activeAgentID) }
+                ))
+
+                Picker("Reasoning effort", selection: Binding(
+                    get: { settings.reasoningEffort(for: settings.activeAgentID) },
+                    set: { settings.setReasoningEffort($0, for: settings.activeAgentID) }
+                )) {
+                    ForEach(settings.activeAgentID.allowedReasoningEfforts) { effort in
+                        Text(effort.displayName).tag(effort)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+
             Section("Permission Mode") {
                 Picker("Mode", selection: Binding(
                     get: { settings.permissionMode(for: settings.activeAgentID) },

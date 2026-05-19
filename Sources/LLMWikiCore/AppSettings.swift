@@ -27,6 +27,11 @@ public final class AppSettings: ObservableObject {
         static let codexBinaryPath = "codexBinaryPath"
         static let claudePermissionMode = "claudePermissionMode"
         static let codexPermissionMode = "codexPermissionMode"
+        static let claudeModelName = "claudeModelName"
+        static let codexModelName = "codexModelName"
+        static let claudeReasoningEffort = "claudeReasoningEffort"
+        static let codexReasoningEffort = "codexReasoningEffort"
+        static let ingestDepth = "ingestDepth"
         static let promptTemplate = "promptTemplate"
         static let maxRetries = "maxRetries"
         static let retryBackoffSeconds = "retryBackoffSeconds"
@@ -62,6 +67,26 @@ public final class AppSettings: ObservableObject {
 
     @Published public var codexPermissionMode: PermissionMode {
         didSet { defaults.set(codexPermissionMode.rawValue, forKey: Keys.codexPermissionMode) }
+    }
+
+    @Published public var claudeModelName: String {
+        didSet { defaults.set(claudeModelName, forKey: Keys.claudeModelName) }
+    }
+
+    @Published public var codexModelName: String {
+        didSet { defaults.set(codexModelName, forKey: Keys.codexModelName) }
+    }
+
+    @Published public var claudeReasoningEffort: ReasoningEffort {
+        didSet { defaults.set(claudeReasoningEffort.rawValue, forKey: Keys.claudeReasoningEffort) }
+    }
+
+    @Published public var codexReasoningEffort: ReasoningEffort {
+        didSet { defaults.set(codexReasoningEffort.rawValue, forKey: Keys.codexReasoningEffort) }
+    }
+
+    @Published public var ingestDepth: IngestDepth {
+        didSet { defaults.set(ingestDepth.rawValue, forKey: Keys.ingestDepth) }
     }
 
     @Published public var promptTemplate: String {
@@ -100,6 +125,18 @@ public final class AppSettings: ObservableObject {
 
         let codexModeRaw = defaults.string(forKey: Keys.codexPermissionMode)
         self.codexPermissionMode = codexModeRaw.flatMap(PermissionMode.init(rawValue:)) ?? .codexWorkspaceWrite
+
+        self.claudeModelName = defaults.string(forKey: Keys.claudeModelName) ?? ""
+        self.codexModelName = defaults.string(forKey: Keys.codexModelName) ?? ""
+
+        let claudeEffortRaw = defaults.string(forKey: Keys.claudeReasoningEffort)
+        self.claudeReasoningEffort = claudeEffortRaw.flatMap(ReasoningEffort.init(rawValue:)) ?? .systemDefault
+
+        let codexEffortRaw = defaults.string(forKey: Keys.codexReasoningEffort)
+        self.codexReasoningEffort = codexEffortRaw.flatMap(ReasoningEffort.init(rawValue:)) ?? .systemDefault
+
+        let ingestDepthRaw = defaults.string(forKey: Keys.ingestDepth)
+        self.ingestDepth = ingestDepthRaw.flatMap(IngestDepth.init(rawValue:)) ?? .normal
 
         self.promptTemplate = defaults.string(forKey: Keys.promptTemplate) ?? Self.defaultPromptTemplate
         self.maxRetries = defaults.object(forKey: Keys.maxRetries) as? Int ?? 3
@@ -155,6 +192,39 @@ public final class AppSettings: ObservableObject {
         switch agentID {
         case .claude: claudePermissionMode = mode
         case .codex: codexPermissionMode = mode
+        }
+    }
+
+    public func modelName(for agentID: AgentID) -> String {
+        switch agentID {
+        case .claude: claudeModelName
+        case .codex: codexModelName
+        }
+    }
+
+    public func setModelName(_ modelName: String, for agentID: AgentID) {
+        switch agentID {
+        case .claude: claudeModelName = modelName
+        case .codex: codexModelName = modelName
+        }
+    }
+
+    public func reasoningEffort(for agentID: AgentID) -> ReasoningEffort {
+        let effort: ReasoningEffort
+        switch agentID {
+        case .claude: effort = claudeReasoningEffort
+        case .codex: effort = codexReasoningEffort
+        }
+
+        return agentID.allowedReasoningEfforts.contains(effort) ? effort : .systemDefault
+    }
+
+    public func setReasoningEffort(_ effort: ReasoningEffort, for agentID: AgentID) {
+        guard agentID.allowedReasoningEfforts.contains(effort) else { return }
+
+        switch agentID {
+        case .claude: claudeReasoningEffort = effort
+        case .codex: codexReasoningEffort = effort
         }
     }
 

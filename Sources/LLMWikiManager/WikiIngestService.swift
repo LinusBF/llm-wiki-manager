@@ -291,7 +291,9 @@ final class WikiIngestService: ObservableObject {
             binary: binary,
             vaultRoot: paths.vaultRoot,
             prompt: prompt,
-            permissionMode: mode
+            permissionMode: mode,
+            modelName: settings.modelName(for: item.agentId),
+            reasoningEffort: settings.reasoningEffort(for: item.agentId)
         )
 
         item.status = .running
@@ -463,7 +465,12 @@ final class WikiIngestService: ObservableObject {
             prompt = settings.promptTemplate
         }
 
-        return prompt.replacingOccurrences(of: "{file}", with: paths.relativePath(for: fileURL))
+        let renderedPrompt = prompt.replacingOccurrences(of: "{file}", with: paths.relativePath(for: fileURL))
+        return """
+        \(renderedPrompt)
+
+        \(settings.ingestDepth.promptDirective)
+        """
     }
 
     private func record(line: ProcessOutputLine, item: QueueItem, paths: WikiPaths) {

@@ -43,16 +43,22 @@ When the app initializes an empty vault, it creates `raw/`, `wiki/`, `.ingested/
 
 ## Agent Invocations
 
+Preferences → Ingestion lets you tune the active agent:
+
+- Ingest mode: `Fast`, `Normal`, or `Deep`. This changes the workflow instruction appended to each ingest prompt.
+- Model: optional model name passed to the active agent CLI.
+- Reasoning effort: optional effort override. Claude Code uses `--effort`; Codex uses `-c model_reasoning_effort="..."`.
+
 Claude Code:
 
 ```bash
-claude -p "<prompt>" --permission-mode acceptEdits
+claude -p "<prompt>" --permission-mode acceptEdits [--model sonnet] [--effort high]
 ```
 
 Codex:
 
 ```bash
-codex exec --skip-git-repo-check --sandbox workspace-write "<prompt>"
+codex exec --skip-git-repo-check --sandbox workspace-write [--model gpt-5.4-mini] [-c 'model_reasoning_effort="low"'] "<prompt>"
 ```
 
 The app sets the subprocess working directory to the vault root so each agent finds its own schema file automatically.

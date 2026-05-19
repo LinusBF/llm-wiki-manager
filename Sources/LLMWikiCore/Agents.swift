@@ -41,10 +41,85 @@ public enum AgentID: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    public var allowedReasoningEfforts: [ReasoningEffort] {
+        switch self {
+        case .claude:
+            ReasoningEffort.allCases
+        case .codex:
+            [.systemDefault, .low, .medium, .high, .xhigh]
+        }
+    }
+
     public var adapter: any IngestAgent {
         switch self {
         case .claude: ClaudeCodeAgent()
         case .codex: CodexAgent()
+        }
+    }
+}
+
+public enum IngestDepth: String, Codable, CaseIterable, Identifiable {
+    case fast
+    case normal
+    case deep
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .fast: "Fast"
+        case .normal: "Normal"
+        case .deep: "Deep"
+        }
+    }
+
+    public var promptDirective: String {
+        switch self {
+        case .fast:
+            """
+            Ingest mode: Fast. Prioritize getting the source filed quickly. Create or update the source page, update `wiki/index.md`, and append to `wiki/log.md`. Only update entity, concept, or synthesis pages when the source introduces a major new fact or contradiction.
+            """
+        case .normal:
+            """
+            Ingest mode: Normal. File the source, update `wiki/index.md` and `wiki/log.md`, and update the most relevant entity or concept pages. Keep the pass focused; avoid broad synthesis unless the source clearly warrants it.
+            """
+        case .deep:
+            """
+            Ingest mode: Deep. Perform a full LLM Wiki ingest: source page, index, log, relevant entity and concept pages, contradictions, cross-references, and synthesis updates when useful.
+            """
+        }
+    }
+}
+
+public enum ReasoningEffort: String, Codable, CaseIterable, Identifiable {
+    case systemDefault
+    case low
+    case medium
+    case high
+    case xhigh
+    case max
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .systemDefault: "System default"
+        case .low: "Low"
+        case .medium: "Medium"
+        case .high: "High"
+        case .xhigh: "XHigh"
+        case .max: "Max"
+        }
+    }
+
+    public var cliValue: String? {
+        switch self {
+        case .systemDefault: nil
+        case .low: "low"
+        case .medium: "medium"
+        case .high: "high"
+        case .xhigh: "xhigh"
+        case .max: "max"
         }
     }
 }
@@ -87,7 +162,9 @@ public protocol IngestAgent {
         binary: URL,
         vaultRoot: URL,
         prompt: String,
-        permissionMode: PermissionMode
+        permissionMode: PermissionMode,
+        modelName: String,
+        reasoningEffort: ReasoningEffort
     ) -> [String]
 }
 
@@ -107,19 +184,33 @@ public struct ClaudeCodeAgent: IngestAgent {
         binary: URL,
         vaultRoot: URL,
         prompt: String,
-        permissionMode: PermissionMode
+        permissionMode: PermissionMode,
+        modelName: String = "",
+        reasoningEffort: ReasoningEffort = .systemDefault
     ) -> [String] {
         let mode = AgentID.claude.allowedPermissionModes.contains(permissionMode)
             ? permissionMode
             : AgentID.claude.defaultPermissionMode
 
-        return [
+        var invocation = [
             binary.path,
             "-p",
             prompt,
             "--permission-mode",
             mode.rawValue
         ]
+
+        let trimmedModelName = modelName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedModelName.isEmpty {
+            invocation.append(contentsOf: ["--model", trimmedModelName])
+        }
+
+        if let effort = reasoningEffort.cliValue,
+           AgentID.claude.allowedReasoningEfforts.contains(reasoningEffort) {
+            invocation.append(contentsOf: ["--effort", effort])
+        }
+
+        return invocation
     }
 }
 
@@ -139,20 +230,34 @@ public struct CodexAgent: IngestAgent {
         binary: URL,
         vaultRoot: URL,
         prompt: String,
-        permissionMode: PermissionMode
+        permissionMode: PermissionMode,
+        modelName: String = "",
+        reasoningEffort: ReasoningEffort = .systemDefault
     ) -> [String] {
         let mode = AgentID.codex.allowedPermissionModes.contains(permissionMode)
             ? permissionMode
             : AgentID.codex.defaultPermissionMode
 
-        return [
+        var invocation = [
             binary.path,
             "exec",
             "--skip-git-repo-check",
             "--sandbox",
-            mode.rawValue,
-            prompt
+            mode.rawValue
         ]
+
+        let trimmedModelName = modelName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedModelName.isEmpty {
+            invocation.append(contentsOf: ["--model", trimmedModelName])
+        }
+
+        if let effort = reasoningEffort.cliValue,
+           AgentID.codex.allowedReasoningEfforts.contains(reasoningEffort) {
+            invocation.append(contentsOf: ["-c", "model_reasoning_effort=\"\(effort)\""])
+        }
+
+        invocation.append(prompt)
+        return invocation
     }
 }
 

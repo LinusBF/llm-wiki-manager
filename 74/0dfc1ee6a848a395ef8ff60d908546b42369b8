@@ -1,0 +1,32 @@
+Sources/LLMWikiCore/DefaultSchema.swift
+  s_ff15347e18dc6f::t_66efa938ed4167 14-90
+Scripts/build-app.sh
+  s_ff15347e18dc6f::t_728e8edf100942 1-24
+Packaging/Info.plist
+  s_ff15347e18dc6f::t_9d2a927edde4b6 10
+Sources/LLMWikiCore/Agents.swift
+  s_ff15347e18dc6f::t_55e997a0004a86 151
+Tests/LLMWikiManagerTests/AgentInvocationTests.swift
+  s_ff15347e18dc6f::t_55e997a0004a86 35-51
+Sources/LLMWikiManager/StatusBarController.swift
+  s_ff15347e18dc6f::t_372295100a83a5 6-228
+README.md
+  s_ff15347e18dc6f::t_55e997a0004a86 48
+  s_ff15347e18dc6f::t_3e4452b4369462 35-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "740dfc1ee6a848a395ef8ff60d908546b42369b8",
+  "prompts": {},
+  "sessions": {
+    "s_ff15347e18dc6f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e3c3e-2cd5-7972-8e26-765315b77340",
+        "model": "gpt-5.5"
+      },
+      "human_author": "LinusBF <contact@linusbf.com>"
+    }
+  }
+}

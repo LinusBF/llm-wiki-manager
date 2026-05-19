@@ -1,0 +1,19 @@
+README.md
+  s_ff15347e18dc6f::t_f5f58e936ad7af 5-6,9-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "dc83043806bfd8bfab380f09477b0bed8525ae48",
+  "prompts": {},
+  "sessions": {
+    "s_ff15347e18dc6f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e3c3e-2cd5-7972-8e26-765315b77340",
+        "model": "gpt-5.5"
+      },
+      "human_author": "LinusBF <contact@linusbf.com>"
+    }
+  }
+}

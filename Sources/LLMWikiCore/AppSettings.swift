@@ -203,28 +203,50 @@ public final class AppSettings: ObservableObject {
     }
 
     public func setModelName(_ modelName: String, for agentID: AgentID) {
+        // Stored verbatim so typing in the custom field isn't fought with;
+        // every consumer trims before use.
         switch agentID {
         case .claude: claudeModelName = modelName
         case .codex: codexModelName = modelName
         }
+
+        // The new model may not offer the effort level the old one did.
+        let stored = storedReasoningEffort(for: agentID)
+        if !supportedReasoningEfforts(for: agentID).contains(stored) {
+            setReasoningEffort(.systemDefault, for: agentID)
+        }
+    }
+
+    public func selectedModel(for agentID: AgentID) -> AgentModel? {
+        AgentModelCatalog.model(named: modelName(for: agentID), for: agentID)
+    }
+
+    /// Effort levels the effort picker may offer, given the currently selected model.
+    public func supportedReasoningEfforts(for agentID: AgentID) -> [ReasoningEffort] {
+        AgentModelCatalog.allowedReasoningEfforts(
+            forModelNamed: modelName(for: agentID),
+            agentID: agentID
+        )
     }
 
     public func reasoningEffort(for agentID: AgentID) -> ReasoningEffort {
-        let effort: ReasoningEffort
-        switch agentID {
-        case .claude: effort = claudeReasoningEffort
-        case .codex: effort = codexReasoningEffort
-        }
-
-        return agentID.allowedReasoningEfforts.contains(effort) ? effort : .systemDefault
+        let effort = storedReasoningEffort(for: agentID)
+        return supportedReasoningEfforts(for: agentID).contains(effort) ? effort : .systemDefault
     }
 
     public func setReasoningEffort(_ effort: ReasoningEffort, for agentID: AgentID) {
-        guard agentID.allowedReasoningEfforts.contains(effort) else { return }
+        guard supportedReasoningEfforts(for: agentID).contains(effort) else { return }
 
         switch agentID {
         case .claude: claudeReasoningEffort = effort
         case .codex: codexReasoningEffort = effort
+        }
+    }
+
+    private func storedReasoningEffort(for agentID: AgentID) -> ReasoningEffort {
+        switch agentID {
+        case .claude: claudeReasoningEffort
+        case .codex: codexReasoningEffort
         }
     }
 

@@ -129,6 +129,26 @@ final class WikiIngestService: ObservableObject {
         refreshStatus()
     }
 
+    func retryFailed() {
+        let failedIndices = queue.indices.filter { queue[$0].status == .failed }
+        guard !failedIndices.isEmpty else { return }
+
+        for index in failedIndices {
+            var item = queue[index]
+            item.status = .pending
+            item.attempts = 0
+            item.lastError = nil
+            item.nextRunAt = nil
+            item.startedAt = nil
+            item.finishedAt = nil
+            queue[index] = item
+        }
+
+        persistState()
+        processNextIfPossible()
+        refreshStatus()
+    }
+
     func requestAgentSwitch(to newAgentID: AgentID) {
         guard newAgentID != settings.activeAgentID else { return }
 

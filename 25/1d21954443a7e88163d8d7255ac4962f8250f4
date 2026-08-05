@@ -1,0 +1,60 @@
+README.md
+  s_9ded5425c2e633::t_70fc6f24ea6a92 49-50,55,61,64
+  s_9ded5425c2e633::t_b1882235812d48 65
+Sources/LLMWikiManager/StatusBarController.swift
+  s_a94cab6a997f5f::t_ea63358bec7b31 80-82
+  s_9ded5425c2e633::t_a2d1563a0f1dbf 304-305
+  s_a94cab6a997f5f::t_1e73e67f2b5500 230-233
+Sources/LLMWikiCore/Agents.swift
+  s_9ded5425c2e633::t_71243f62108a67 105,117
+  s_9ded5425c2e633::t_a66909dcf2a70a 98
+  s_a94cab6a997f5f::t_06112737a8a0c6 128
+  s_9ded5425c2e633::t_a97e620cad9555 215-219
+  s_a94cab6a997f5f::t_2bc204e3fa66e5 289-292
+  s_9ded5425c2e633::t_87bf0bf00a29d6 264-268
+  s_9ded5425c2e633::t_5ae02f60051a8c 44-49,51-53
+Sources/LLMWikiCore/AgentModels.swift
+  s_9ded5425c2e633::t_687846dc35d3d9 34-68
+  s_9ded5425c2e633::t_90c5a549b00162 1-33,69-180
+Sources/LLMWikiManager/PreferencesView.swift
+  s_9ded5425c2e633::t_efd487bb5d5968 125-129,132,134,136,138-185,187,193-194,197-198,203-205
+  s_9ded5425c2e633::t_6ceb5f83606669 86-87
+  s_9ded5425c2e633::t_a85972d6e3e4ba 186,188-192,195-196,199-202
+  s_9ded5425c2e633::t_470c11be651f47 130-131,133,135,137
+  s_9ded5425c2e633::t_f7790f45e9640d 8
+Tests/LLMWikiManagerTests/AgentInvocationTests.swift
+  s_9ded5425c2e633::t_758b8e799c2bee 216-249
+  s_a94cab6a997f5f::t_1193dc49f9ffe8 93,100-117
+  s_9ded5425c2e633::t_67dfcdb59dafdd 118-126,130-215,250-262
+Sources/LLMWikiCore/AppSettings.swift
+  s_9ded5425c2e633::t_e9ea3c5a844298 206-207
+  s_9ded5425c2e633::t_a34d2db1217aea 213-216,218-230,232-234,238,246-249,251
+  s_9ded5425c2e633::t_5a5b1adc8404e4 250
+  s_9ded5425c2e633::t_ac63db4d998f50 252
+Sources/LLMWikiManager/WikiIngestService.swift
+  s_a94cab6a997f5f::t_5da39505751c8c 132-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "251d21954443a7e88163d8d7255ac4962f8250f4",
+  "prompts": {},
+  "sessions": {
+    "s_9ded5425c2e633": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ff86abe1-34f0-4729-b979-6d2d84c5c808",
+        "model": "claude-opus-5"
+      },
+      "human_author": "LinusBF <contact@linusbf.com>"
+    },
+    "s_a94cab6a997f5f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b6901712-7859-4586-9987-387a4893133b",
+        "model": "claude-fable-5"
+      },
+      "human_author": "LinusBF <contact@linusbf.com>"
+    }
+  }
+}

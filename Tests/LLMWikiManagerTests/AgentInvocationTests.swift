@@ -90,17 +90,175 @@ final class AgentInvocationTests: XCTestCase {
         ])
     }
 
-    func testCodexInvocationIgnoresUnsupportedMaxReasoningEffort() {
+    func testCodexInvocationSupportsUltraReasoningEffort() {
         let binary = URL(fileURLWithPath: "/opt/homebrew/bin/codex")
         let invocation = CodexAgent().makeIngestInvocation(
             binary: binary,
             vaultRoot: URL(fileURLWithPath: "/tmp/vault"),
             prompt: "Ingest",
             permissionMode: .codexWorkspaceWrite,
-            modelName: "",
-            reasoningEffort: .max
+            modelName: "gpt-5.6-sol",
+            reasoningEffort: .ultra
+        )
+
+        XCTAssertEqual(invocation.suffix(5), [
+            "--model",
+            "gpt-5.6-sol",
+            "-c",
+            "model_reasoning_effort=\"ultra\"",
+            "Ingest"
+        ])
+    }
+
+    func testClaudeInvocationDoesNotOfferUltraReasoningEffort() {
+        XCTAssertFalse(AgentID.claude.allowedReasoningEfforts.contains(.ultra))
+        XCTAssertTrue(AgentID.codex.allowedReasoningEfforts.contains(.ultra))
+    }
+
+    func testCodexInvocationDropsEffortUnsupportedByChosenModel() {
+        let binary = URL(fileURLWithPath: "/opt/homebrew/bin/codex")
+        let invocation = CodexAgent().makeIngestInvocation(
+            binary: binary,
+            vaultRoot: URL(fileURLWithPath: "/tmp/vault"),
+            prompt: "Ingest",
+            permissionMode: .codexWorkspaceWrite,
+            modelName: "gpt-5.5",
+            reasoningEffort: .ultra
         )
 
         XCTAssertFalse(invocation.contains("-c"))
+        XCTAssertEqual(invocation.suffix(3), ["--model", "gpt-5.5", "Ingest"])
+    }
+
+    func testClaudeInvocationDropsEffortForModelWithoutEffortControl() {
+        let binary = URL(fileURLWithPath: "/usr/local/bin/claude")
+        let invocation = ClaudeCodeAgent().makeIngestInvocation(
+            binary: binary,
+            vaultRoot: URL(fileURLWithPath: "/tmp/vault"),
+            prompt: "Ingest",
+            permissionMode: .claudeAcceptEdits,
+            modelName: "claude-haiku-4-5",
+            reasoningEffort: .high
+        )
+
+        XCTAssertFalse(invocation.contains("--effort"))
+        XCTAssertEqual(invocation.suffix(2), ["--model", "claude-haiku-4-5"])
+    }
+
+    func testCustomModelNameFallsBackToAgentWideEffortSet() {
+        let binary = URL(fileURLWithPath: "/opt/homebrew/bin/codex")
+        let invocation = CodexAgent().makeIngestInvocation(
+            binary: binary,
+            vaultRoot: URL(fileURLWithPath: "/tmp/vault"),
+            prompt: "Ingest",
+            permissionMode: .codexWorkspaceWrite,
+            modelName: "some-unreleased-model",
+            reasoningEffort: .ultra
+        )
+
+        XCTAssertEqual(invocation.suffix(5), [
+            "--model",
+            "some-unreleased-model",
+            "-c",
+            "model_reasoning_effort=\"ultra\"",
+            "Ingest"
+        ])
+    }
+}
+
+final class AgentModelCatalogTests: XCTestCase {
+    func testEveryAgentExposesModels() {
+        for agent in AgentID.allCases {
+            XCTAssertFalse(agent.availableModels.isEmpty, "\(agent.displayName) has no models")
+        }
+    }
+
+    func testModelIdentifiersAreUnique() {
+        for agent in AgentID.allCases {
+            let ids = agent.availableModels.map(\.id)
+            XCTAssertEqual(ids.count, Set(ids).count, "\(agent.displayName) has duplicate model ids")
+        }
+    }
+
+    func testAgentEffortSetIsUnionOfItsModels() {
+        XCTAssertEqual(
+            AgentID.claude.allowedReasoningEfforts,
+            [.systemDefault, .low, .medium, .high, .xhigh, .max]
+        )
+        XCTAssertEqual(
+            AgentID.codex.allowedReasoningEfforts,
+            [.systemDefault, .low, .medium, .high, .xhigh, .max, .ultra]
+        )
+    }
+
+    func testModelLookupIgnoresSurroundingWhitespace() {
+        XCTAssertEqual(
+            AgentModelCatalog.model(named: "  claude-opus-5 ", for: .claude)?.displayName,
+            "Claude Opus 5"
+        )
+        XCTAssertNil(AgentModelCatalog.model(named: "claude-opus-5", for: .codex))
+        XCTAssertNil(AgentModelCatalog.model(named: "", for: .claude))
+    }
+
+    @MainActor
+    func testSelectingModelWithoutCurrentEffortResetsToSystemDefault() {
+        let defaults = UserDefaults(suiteName: "AgentModelCatalogTests-\(UUID().uuidString)")!
+        let settings = AppSettings(defaults: defaults)
+
+        settings.setModelName("gpt-5.6-sol", for: .codex)
+        settings.setReasoningEffort(.ultra, for: .codex)
+        XCTAssertEqual(settings.reasoningEffort(for: .codex), .ultra)
+
+        settings.setModelName("gpt-5.5", for: .codex)
+        XCTAssertEqual(settings.reasoningEffort(for: .codex), .systemDefault)
+    }
+
+    func testModelSelectionResolvesStoredName() {
+        XCTAssertEqual(ModelSelection.resolve(modelName: "", agentID: .codex), .agentDefault)
+        XCTAssertEqual(
+            ModelSelection.resolve(modelName: "gpt-5.6-sol", agentID: .codex),
+            .known("gpt-5.6-sol")
+        )
+        // A codex model name selected while Claude is active is not in Claude's
+        // catalog, so the picker must fall back to Custom rather than a dead tag.
+        XCTAssertEqual(ModelSelection.resolve(modelName: "gpt-5.6-sol", agentID: .claude), .custom)
+        XCTAssertEqual(ModelSelection.resolve(modelName: "future-model", agentID: .codex), .custom)
+        XCTAssertEqual(
+            ModelSelection.resolve(modelName: "", agentID: .codex, forcesCustom: true),
+            .custom
+        )
+    }
+
+    func testModelSelectionStoredModelName() {
+        XCTAssertEqual(ModelSelection.agentDefault.storedModelName, "")
+        XCTAssertEqual(ModelSelection.known("gpt-5.5").storedModelName, "gpt-5.5")
+        XCTAssertNil(ModelSelection.custom.storedModelName)
+    }
+
+    func testEveryCatalogModelResolvesToAKnownSelection() {
+        for agent in AgentID.allCases {
+            for model in agent.availableModels {
+                XCTAssertEqual(
+                    ModelSelection.resolve(modelName: model.id, agentID: agent),
+                    .known(model.id),
+                    "\(model.id) does not round-trip through the picker"
+                )
+            }
+        }
+    }
+
+    @MainActor
+    func testEffortSetFollowsSelectedModel() {
+        let defaults = UserDefaults(suiteName: "AgentModelCatalogTests-\(UUID().uuidString)")!
+        let settings = AppSettings(defaults: defaults)
+
+        settings.setModelName("claude-haiku-4-5", for: .claude)
+        XCTAssertEqual(settings.supportedReasoningEfforts(for: .claude), [.systemDefault])
+        settings.setReasoningEffort(.high, for: .claude)
+        XCTAssertEqual(settings.reasoningEffort(for: .claude), .systemDefault)
+
+        settings.setModelName("claude-opus-5", for: .claude)
+        settings.setReasoningEffort(.xhigh, for: .claude)
+        XCTAssertEqual(settings.reasoningEffort(for: .claude), .xhigh)
     }
 }

@@ -41,12 +41,16 @@ public enum AgentID: String, Codable, CaseIterable, Identifiable {
         }
     }
 
+    public var availableModels: [AgentModel] {
+        AgentModelCatalog.models(for: self)
+    }
+
+    /// Union of the effort levels any of this agent's models accept. Used for
+    /// custom model names, where the exact model's capabilities are unknown.
     public var allowedReasoningEfforts: [ReasoningEffort] {
-        switch self {
-        case .claude:
-            ReasoningEffort.allCases
-        case .codex:
-            [.systemDefault, .low, .medium, .high, .xhigh]
+        let supported = Set(availableModels.flatMap(\.supportedEfforts))
+        return [.systemDefault] + ReasoningEffort.allCases.filter {
+            $0 != .systemDefault && supported.contains($0)
         }
     }
 
@@ -91,13 +95,14 @@ public enum IngestDepth: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-public enum ReasoningEffort: String, Codable, CaseIterable, Identifiable {
+public enum ReasoningEffort: String, Codable, CaseIterable, Identifiable, Sendable {
     case systemDefault
     case low
     case medium
     case high
     case xhigh
     case max
+    case ultra
 
     public var id: String { rawValue }
 
@@ -109,6 +114,7 @@ public enum ReasoningEffort: String, Codable, CaseIterable, Identifiable {
         case .high: "High"
         case .xhigh: "XHigh"
         case .max: "Max"
+        case .ultra: "Ultra"
         }
     }
 
@@ -119,6 +125,7 @@ public enum ReasoningEffort: String, Codable, CaseIterable, Identifiable {
         case .medium: "medium"
         case .high: "high"
         case .xhigh: "xhigh"
+        case .ultra: "ultra"
         case .max: "max"
         }
     }
@@ -205,8 +212,11 @@ public struct ClaudeCodeAgent: IngestAgent {
             invocation.append(contentsOf: ["--model", trimmedModelName])
         }
 
-        if let effort = reasoningEffort.cliValue,
-           AgentID.claude.allowedReasoningEfforts.contains(reasoningEffort) {
+        let allowedEfforts = AgentModelCatalog.allowedReasoningEfforts(
+            forModelNamed: trimmedModelName,
+            agentID: .claude
+        )
+        if let effort = reasoningEffort.cliValue, allowedEfforts.contains(reasoningEffort) {
             invocation.append(contentsOf: ["--effort", effort])
         }
 
@@ -251,8 +261,11 @@ public struct CodexAgent: IngestAgent {
             invocation.append(contentsOf: ["--model", trimmedModelName])
         }
 
-        if let effort = reasoningEffort.cliValue,
-           AgentID.codex.allowedReasoningEfforts.contains(reasoningEffort) {
+        let allowedEfforts = AgentModelCatalog.allowedReasoningEfforts(
+            forModelNamed: trimmedModelName,
+            agentID: .codex
+        )
+        if let effort = reasoningEffort.cliValue, allowedEfforts.contains(reasoningEffort) {
             invocation.append(contentsOf: ["-c", "model_reasoning_effort=\"\(effort)\""])
         }
 
@@ -273,7 +286,10 @@ public enum BinaryLocator {
             .split(separator: ":", omittingEmptySubsequences: true)
             .map(String.init)
 
-        for fallback in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"] {
+        let home = NSHomeDirectory()
+        // The self-updating standalone installs (~/.local/bin) track new models
+        // faster than the Homebrew cask, so prefer them during detection.
+        for fallback in ["\(home)/.local/bin", "\(home)/.codex/bin", "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"] {
             if !directories.contains(fallback) {
                 directories.append(fallback)
             }

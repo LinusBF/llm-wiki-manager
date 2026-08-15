@@ -5,6 +5,7 @@ import SwiftUI
 struct PreferencesView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var service: WikiIngestService
+    @State private var showsCustomModelField = false
 
     var body: some View {
         TabView {
@@ -82,20 +83,8 @@ struct PreferencesView: View {
                 }
                 .pickerStyle(.segmented)
 
-                TextField("Model", text: Binding(
-                    get: { settings.modelName(for: settings.activeAgentID) },
-                    set: { settings.setModelName($0, for: settings.activeAgentID) }
-                ))
-
-                Picker("Reasoning effort", selection: Binding(
-                    get: { settings.reasoningEffort(for: settings.activeAgentID) },
-                    set: { settings.setReasoningEffort($0, for: settings.activeAgentID) }
-                )) {
-                    ForEach(settings.activeAgentID.allowedReasoningEfforts) { effort in
-                        Text(effort.displayName).tag(effort)
-                    }
-                }
-                .pickerStyle(.menu)
+                modelPicker
+                effortPicker
             }
 
             Section("Permission Mode") {
@@ -130,6 +119,87 @@ struct PreferencesView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var modelPicker: some View {
+        let agent = settings.activeAgentID
+
+        Picker("Model", selection: Binding(
+            get: { modelSelection },
+            set: { applyModelSelection($0) }
+        )) {
+            Text("\(agent.displayName) default").tag(ModelSelection.agentDefault)
+            ForEach(agent.availableModels) { model in
+                Text(model.displayName).tag(ModelSelection.known(model.id))
+            }
+            Text("Custom…").tag(ModelSelection.custom)
+        }
+        .pickerStyle(.menu)
+        .onChange(of: agent) { _, _ in
+            showsCustomModelField = false
+        }
+
+        if isCustomModelSelected {
+            TextField("Model name passed to --model", text: Binding(
+                get: { settings.modelName(for: agent) },
+                set: { settings.setModelName($0, for: agent) }
+            ))
+            .font(.system(.body, design: .monospaced))
+        }
+
+        if let model = settings.selectedModel(for: agent) {
+            Text("\(model.id) · \(model.summary)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if !isCustomModelSelected {
+            Text("Lets the \(agent.displayName) CLI pick its own default model.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var effortPicker: some View {
+        let agent = settings.activeAgentID
+        let efforts = settings.supportedReasoningEfforts(for: agent)
+
+        Picker("Reasoning effort", selection: Binding(
+            get: { settings.reasoningEffort(for: agent) },
+            set: { settings.setReasoningEffort($0, for: agent) }
+        )) {
+            ForEach(efforts) { effort in
+                Text(effort.displayName).tag(effort)
+            }
+        }
+        .pickerStyle(.menu)
+        .disabled(efforts.count <= 1)
+
+        if efforts.count <= 1, let model = settings.selectedModel(for: agent) {
+            Text("\(model.displayName) has no reasoning effort control.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var modelSelection: ModelSelection {
+        let agent = settings.activeAgentID
+        return ModelSelection.resolve(
+            modelName: settings.modelName(for: agent),
+            agentID: agent,
+            forcesCustom: showsCustomModelField
+        )
+    }
+
+    private var isCustomModelSelected: Bool {
+        modelSelection == .custom
+    }
+
+    private func applyModelSelection(_ selection: ModelSelection) {
+        showsCustomModelField = selection == .custom
+        if let name = selection.storedModelName {
+            settings.setModelName(name, for: settings.activeAgentID)
         }
     }
 

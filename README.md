@@ -46,20 +46,22 @@ When the app initializes an empty vault, it creates `raw/`, `wiki/`, `.ingested/
 Preferences → Ingestion lets you tune the active agent:
 
 - Ingest mode: `Fast`, `Normal`, or `Deep`. This changes the workflow instruction appended to each ingest prompt.
-- Model: optional model name passed to the active agent CLI.
-- Reasoning effort: optional effort override. Claude Code uses `--effort`; Codex uses `-c model_reasoning_effort="..."`.
+- Model: pick an exact model from the active agent's catalog (`Sources/LLMWikiCore/AgentModels.swift`), leave it on the agent default, or choose `Custom…` to type any model name the CLI accepts.
+- Reasoning effort: effort override, limited to the levels the selected model actually supports. Claude Code uses `--effort`; Codex uses `-c model_reasoning_effort="..."`. Models without effort control (e.g. Claude Haiku 4.5) disable the picker, and the flag is omitted from the invocation.
 
 Claude Code:
 
 ```bash
-claude -p "<prompt>" --permission-mode acceptEdits [--model sonnet] [--effort high]
+claude -p "<prompt>" --permission-mode acceptEdits [--model claude-opus-5] [--effort xhigh]
 ```
 
 Codex:
 
 ```bash
-codex exec --skip-git-repo-check --sandbox workspace-write [--model gpt-5.4-mini] [-c 'model_reasoning_effort="low"'] "<prompt>"
+codex exec --skip-git-repo-check --sandbox workspace-write [--model gpt-5.6-sol] [-c 'model_reasoning_effort="high"'] "<prompt>"
 ```
+
+The model catalog is a curated snapshot, not a live query. To refresh Codex entries, read the slugs and `supported_reasoning_levels` out of `~/.codex/models_cache.json` (skip entries with `visibility: "hide"`); for Claude, check the current model list and which models support `--effort`.
 
 The app sets the subprocess working directory to the vault root so each agent finds its own schema file automatically.
 

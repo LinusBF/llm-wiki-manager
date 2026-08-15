@@ -77,6 +77,9 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(title: pauseTitle, action: #selector(togglePause), target: self)
         menu.addItem(title: "Ingest now", action: #selector(ingestNow), target: self)
         menu.addItem(title: "Re-ingest file…", action: #selector(reingestFile), target: self)
+        if service.failedCount > 0 {
+            menu.addItem(title: "Retry failed (\(service.failedCount))", action: #selector(retryFailed), target: self)
+        }
         menu.addItem(.separator())
 
         let recentMenu = NSMenu()
@@ -224,6 +227,10 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         service.ingestNow()
     }
 
+    @objc private func retryFailed() {
+        service.retryFailed()
+    }
+
     @objc private func reingestFile() {
         guard let vaultURL = settings.resolvedVaultURL() else { return }
         let panel = NSOpenPanel()
@@ -294,7 +301,8 @@ private extension String {
 private extension QueueItem {
     var modelDisplayName: String {
         let trimmed = modelName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? "System default" : trimmed
+        guard !trimmed.isEmpty else { return "System default" }
+        return AgentModelCatalog.model(named: trimmed, for: agentId)?.displayName ?? trimmed
     }
 
     var effectiveQueuedDuration: TimeInterval? {

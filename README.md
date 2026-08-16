@@ -1,6 +1,6 @@
 # LLM Wiki Manager
 
-A lightweight macOS menu bar app that watches an LLM Wiki vault’s `raw/` folder and runs a coding-agent ingest prompt when new top-level source files appear.
+A lightweight watcher that runs a coding-agent ingest prompt when new top-level source files appear in an LLM Wiki vault’s `raw/` folder. It ships as a macOS menu bar app and a headless Linux daemon.
 
 This project is an automation layer for Andrej Karpathy’s original [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern: keep raw sources immutable, let a coding agent incrementally maintain a persistent Markdown wiki, and use the wiki as the durable synthesis layer between you and your sources.
 
@@ -40,6 +40,40 @@ Scripts/build-app.sh
 The bundling script creates `dist/LLM Wiki Manager.app` with `LSUIElement = true`, so it runs as a menu bar app without a Dock icon.
 
 When the app initializes an empty vault, it creates `raw/`, `wiki/`, `.ingested/`, and starter `AGENTS.md` / `CLAUDE.md` schema files from the bundled templates. Existing schema files are never overwritten.
+
+## Linux background service
+
+The Linux daemon polls `raw/`, waits for each source's size and modification time to remain stable across two polls, processes sources sequentially, and uses the same prompts, markers, and JSONL operational log as the macOS app. It runs as a per-user `systemd` service, so the agent CLI uses that user's existing credentials.
+
+Prerequisites are Swift 5.9 or newer, `systemd`, and an authenticated `claude` or `codex` CLI. On the Linux server:
+
+```bash
+git clone <this-repository-url>
+cd llm-wiki-manager
+Scripts/install-linux-service.sh /absolute/path/to/vault
+```
+
+The installer builds the release binary, installs it under `~/.local/bin`, writes the user unit, captures the current `PATH` for user-scoped agent installations, and starts it. It does not overwrite an existing configuration. Edit `~/.config/llm-wiki-manager/environment` to choose the agent or set model, reasoning, retry, polling, permission, and binary-path overrides; [the example](Packaging/llm-wiki-manager.env.example) lists every setting.
+
+```bash
+systemctl --user status llm-wiki-manager.service
+journalctl --user -u llm-wiki-manager.service -f
+systemctl --user restart llm-wiki-manager.service
+```
+
+To keep the user service running after logout, an administrator must enable lingering once:
+
+```bash
+sudo loginctl enable-linger "$USER"
+```
+
+For a foreground run or non-systemd supervisor:
+
+```bash
+swift run -c release llm-wiki-daemon --vault /absolute/path/to/vault --agent codex
+```
+
+The daemon exits on invalid configuration or a missing agent executable so `systemd` can report and restart the failure. After a source exhausts its configured retries, it is skipped until the service is restarted. On shutdown, `systemd` stops the daemon and active agent together; an interrupted source remains unmarked and is retried after restart.
 
 ## Agent Invocations
 

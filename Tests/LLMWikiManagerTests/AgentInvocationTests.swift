@@ -200,6 +200,7 @@ final class AgentModelCatalogTests: XCTestCase {
         XCTAssertNil(AgentModelCatalog.model(named: "", for: .claude))
     }
 
+    #if canImport(Combine)
     @MainActor
     func testSelectingModelWithoutCurrentEffortResetsToSystemDefault() {
         let defaults = UserDefaults(suiteName: "AgentModelCatalogTests-\(UUID().uuidString)")!
@@ -212,6 +213,7 @@ final class AgentModelCatalogTests: XCTestCase {
         settings.setModelName("gpt-5.5", for: .codex)
         XCTAssertEqual(settings.reasoningEffort(for: .codex), .systemDefault)
     }
+    #endif
 
     func testModelSelectionResolvesStoredName() {
         XCTAssertEqual(ModelSelection.resolve(modelName: "", agentID: .codex), .agentDefault)
@@ -247,6 +249,7 @@ final class AgentModelCatalogTests: XCTestCase {
         }
     }
 
+    #if canImport(Combine)
     @MainActor
     func testEffortSetFollowsSelectedModel() {
         let defaults = UserDefaults(suiteName: "AgentModelCatalogTests-\(UUID().uuidString)")!
@@ -261,4 +264,5 @@ final class AgentModelCatalogTests: XCTestCase {
         settings.setReasoningEffort(.xhigh, for: .claude)
         XCTAssertEqual(settings.reasoningEffort(for: .claude), .xhigh)
     }
+    #endif
 }

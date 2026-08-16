@@ -1,5 +1,9 @@
 import Foundation
 
+public let defaultIngestPrompt = """
+Ingest the new source at `{file}` following the LLM Wiki pattern described in the schema file at the vault root. Read it, summarize it as a new wiki page, update relevant entity and concept pages, update `wiki/index.md`, and append an entry to `wiki/log.md`.
+"""
+
 public struct WikiPaths: Equatable {
     public let vaultRoot: URL
 

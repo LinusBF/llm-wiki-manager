@@ -1,0 +1,17 @@
+[Unit]
+Description=LLM Wiki Manager
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/llm-wiki-manager/environment
+ExecStart=%h/.local/bin/llm-wiki-daemon
+Restart=on-failure
+RestartSec=10
+KillMode=control-group
+TimeoutStopSec=30
+UMask=0077
+
+[Install]
+WantedBy=default.target

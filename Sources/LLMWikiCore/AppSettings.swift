@@ -148,9 +148,7 @@ public final class AppSettings: ObservableObject {
         self.launchAtLogin = defaults.bool(forKey: Keys.launchAtLogin)
     }
 
-    public static let defaultPromptTemplate = """
-    Ingest the new source at `{file}` following the LLM Wiki pattern described in the schema file at the vault root. Read it, summarize it as a new wiki page, update relevant entity and concept pages, update `wiki/index.md`, and append an entry to `wiki/log.md`.
-    """
+    public static let defaultPromptTemplate = defaultIngestPrompt
 
     public func setVaultURL(_ url: URL) throws {
         vaultBookmarkData = try url.bookmarkData(

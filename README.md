@@ -4,7 +4,7 @@ A lightweight watcher that runs a coding-agent ingest prompt when new top-level 
 
 This project is an automation layer for Andrej Karpathy’s original [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern: keep raw sources immutable, let a coding agent incrementally maintain a persistent Markdown wiki, and use the wiki as the durable synthesis layer between you and your sources.
 
-The app supports Claude Code and OpenAI Codex as interchangeable backends. It uses the same `.ingested/` marker convention as the bash workflow, so you can switch between this app, a shell loop, and manual agent runs without changing vault layout.
+The app supports Claude Code, OpenAI Codex, and the Pi coding agent as interchangeable backends. It uses the same `.ingested/` marker convention as the bash workflow, so you can switch between this app, a shell loop, and manual agent runs without changing vault layout.
 
 ## References
 
@@ -45,7 +45,13 @@ When the app initializes an empty vault, it creates `raw/`, `wiki/`, `.ingested/
 
 The Linux daemon polls `raw/`, waits for each source's size and modification time to remain stable across two polls, processes sources sequentially, and uses the same prompts, markers, and JSONL operational log as the macOS app. It runs as a per-user `systemd` service, so the agent CLI uses that user's existing credentials.
 
-Prerequisites are Swift 5.9 or newer, `systemd`, and an authenticated `claude` or `codex` CLI. On the Linux server:
+Prerequisites are Swift 5.9 or newer, `systemd`, and an authenticated `claude`, `codex`, or `pi` CLI. The Pi default `cpa/gpt-5.6-sol` also requires the optional `pi-cliproxyapi-provider` package and its configured credentials:
+
+```bash
+pi install npm:pi-cliproxyapi-provider
+```
+
+On the Linux server:
 
 ```bash
 git clone <this-repository-url>
@@ -54,6 +60,29 @@ Scripts/install-linux-service.sh /absolute/path/to/vault
 ```
 
 The installer builds the release binary, installs it under `~/.local/bin`, writes the user unit, captures the current `PATH` for user-scoped agent installations, and starts it. It does not overwrite an existing configuration. Edit `~/.config/llm-wiki-manager/environment` to choose the agent or set model, reasoning, retry, polling, permission, and binary-path overrides; [the example](Packaging/llm-wiki-manager.env.example) lists every setting.
+
+### Configuration
+
+The daemon reads command-line flags first, then `LLM_WIKI_*` environment variables, then built-in defaults. The systemd unit loads the variables from `~/.config/llm-wiki-manager/environment`; restart the service after editing it.
+
+| Environment variable | Flag | Default |
+| --- | --- | --- |
+| `LLM_WIKI_VAULT` | `--vault` | Required |
+| `LLM_WIKI_AGENT` | `--agent` | `claude`; accepts `claude`, `codex`, or `pi` |
+| `LLM_WIKI_BINARY` | `--binary` | Auto-detect the selected CLI on `PATH` |
+| `LLM_WIKI_MODEL` | `--model` | Pi: `cpa/gpt-5.6-sol`; otherwise agent default |
+| `LLM_WIKI_REASONING_EFFORT` | `--reasoning-effort` | Pi: `high`; otherwise `system-default` |
+| `LLM_WIKI_INGEST_DEPTH` | `--ingest-depth` | `normal`; accepts `fast`, `normal`, or `deep` |
+| `LLM_WIKI_PERMISSION_MODE` | `--permission-mode` | Agent default |
+| `LLM_WIKI_POLL_INTERVAL` | `--poll-interval` | `5` seconds |
+| `LLM_WIKI_MAX_RETRIES` | `--max-retries` | `3` |
+| `LLM_WIKI_RETRY_BACKOFF` | `--retry-backoff` | `10` seconds |
+
+Reasoning values are agent-specific: Claude accepts `low` through `max`, Codex accepts `low` through `ultra`, and Pi accepts `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, and `max`.
+
+```bash
+systemctl --user restart llm-wiki-manager.service
+```
 
 ```bash
 systemctl --user status llm-wiki-manager.service
@@ -81,7 +110,7 @@ Preferences → Ingestion lets you tune the active agent:
 
 - Ingest mode: `Fast`, `Normal`, or `Deep`. This changes the workflow instruction appended to each ingest prompt.
 - Model: pick an exact model from the active agent's catalog (`Sources/LLMWikiCore/AgentModels.swift`), leave it on the agent default, or choose `Custom…` to type any model name the CLI accepts.
-- Reasoning effort: effort override, limited to the levels the selected model actually supports. Claude Code uses `--effort`; Codex uses `-c model_reasoning_effort="..."`. Models without effort control (e.g. Claude Haiku 4.5) disable the picker, and the flag is omitted from the invocation.
+- Reasoning effort: effort override, limited to the levels the selected model actually supports. Claude Code uses `--effort`, Codex uses `-c model_reasoning_effort="..."`, and Pi uses `--thinking`. Models without effort control (e.g. Claude Haiku 4.5) disable the picker, and the flag is omitted from the invocation.
 
 Claude Code:
 
@@ -95,7 +124,15 @@ Codex:
 codex exec --skip-git-repo-check --sandbox workspace-write [--model gpt-5.6-sol] [-c 'model_reasoning_effort="high"'] "<prompt>"
 ```
 
-The model catalog is a curated snapshot, not a live query. To refresh Codex entries, read the slugs and `supported_reasoning_levels` out of `~/.codex/models_cache.json` (skip entries with `visibility: "hide"`); for Claude, check the current model list and which models support `--effort`.
+Pi:
+
+```bash
+pi -p --no-session --no-approve [--model provider/model] [--thinking high] "<prompt>"
+```
+
+Pi has no built-in permission prompts, so its only permission mode is `full-access`. The manager passes `--no-approve`, which makes unattended runs ignore project-local extensions and settings while still loading the vault's `AGENTS.md`. See the [Pi coding-agent documentation](https://github.com/earendil-works/pi/tree/main/packages/coding-agent).
+
+The Claude and Codex model catalogs are curated snapshots, not live queries. Pi defaults to `cpa/gpt-5.6-sol` with `high` reasoning; this requires the optional provider above. Its model list is provider-dependent and refreshes in Pi itself, so select `Custom…` to enter another `provider/model` value Pi accepts.
 
 The app sets the subprocess working directory to the vault root so each agent finds its own schema file automatically.
 

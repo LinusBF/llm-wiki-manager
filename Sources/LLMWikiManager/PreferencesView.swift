@@ -55,6 +55,13 @@ struct PreferencesView: View {
                         settings.codexBinaryPath = BinaryLocator.find("codex")?.path ?? ""
                     }
                 }
+
+                HStack {
+                    TextField("Pi binary", text: $settings.piBinaryPath)
+                    Button("Detect") {
+                        settings.piBinaryPath = BinaryLocator.find("pi")?.path ?? ""
+                    }
+                }
             }
 
             Section("Startup") {
@@ -224,6 +231,7 @@ struct PreferencesView: View {
             Link("Karpathy LLM Wiki gist", destination: URL(string: "https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f")!)
             Link("Claude Code install docs", destination: URL(string: "https://docs.anthropic.com/en/docs/claude-code")!)
             Link("OpenAI Codex docs", destination: URL(string: "https://developers.openai.com/codex")!)
+            Link("Pi coding agent docs", destination: URL(string: "https://github.com/earendil-works/pi/tree/main/packages/coding-agent")!)
             Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading)

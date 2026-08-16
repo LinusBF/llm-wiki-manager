@@ -25,12 +25,16 @@ public final class AppSettings: ObservableObject {
         static let vaultPath = "vaultPath"
         static let claudeBinaryPath = "claudeBinaryPath"
         static let codexBinaryPath = "codexBinaryPath"
+        static let piBinaryPath = "piBinaryPath"
         static let claudePermissionMode = "claudePermissionMode"
         static let codexPermissionMode = "codexPermissionMode"
+        static let piPermissionMode = "piPermissionMode"
         static let claudeModelName = "claudeModelName"
         static let codexModelName = "codexModelName"
+        static let piModelName = "piModelName"
         static let claudeReasoningEffort = "claudeReasoningEffort"
         static let codexReasoningEffort = "codexReasoningEffort"
+        static let piReasoningEffort = "piReasoningEffort"
         static let ingestDepth = "ingestDepth"
         static let promptTemplate = "promptTemplate"
         static let maxRetries = "maxRetries"
@@ -61,12 +65,20 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(codexBinaryPath, forKey: Keys.codexBinaryPath) }
     }
 
+    @Published public var piBinaryPath: String {
+        didSet { defaults.set(piBinaryPath, forKey: Keys.piBinaryPath) }
+    }
+
     @Published public var claudePermissionMode: PermissionMode {
         didSet { defaults.set(claudePermissionMode.rawValue, forKey: Keys.claudePermissionMode) }
     }
 
     @Published public var codexPermissionMode: PermissionMode {
         didSet { defaults.set(codexPermissionMode.rawValue, forKey: Keys.codexPermissionMode) }
+    }
+
+    @Published public var piPermissionMode: PermissionMode {
+        didSet { defaults.set(piPermissionMode.rawValue, forKey: Keys.piPermissionMode) }
     }
 
     @Published public var claudeModelName: String {
@@ -77,12 +89,20 @@ public final class AppSettings: ObservableObject {
         didSet { defaults.set(codexModelName, forKey: Keys.codexModelName) }
     }
 
+    @Published public var piModelName: String {
+        didSet { defaults.set(piModelName, forKey: Keys.piModelName) }
+    }
+
     @Published public var claudeReasoningEffort: ReasoningEffort {
         didSet { defaults.set(claudeReasoningEffort.rawValue, forKey: Keys.claudeReasoningEffort) }
     }
 
     @Published public var codexReasoningEffort: ReasoningEffort {
         didSet { defaults.set(codexReasoningEffort.rawValue, forKey: Keys.codexReasoningEffort) }
+    }
+
+    @Published public var piReasoningEffort: ReasoningEffort {
+        didSet { defaults.set(piReasoningEffort.rawValue, forKey: Keys.piReasoningEffort) }
     }
 
     @Published public var ingestDepth: IngestDepth {
@@ -119,6 +139,7 @@ public final class AppSettings: ObservableObject {
         self.vaultPath = defaults.string(forKey: Keys.vaultPath) ?? ""
         self.claudeBinaryPath = defaults.string(forKey: Keys.claudeBinaryPath) ?? ""
         self.codexBinaryPath = defaults.string(forKey: Keys.codexBinaryPath) ?? ""
+        self.piBinaryPath = defaults.string(forKey: Keys.piBinaryPath) ?? ""
 
         let claudeModeRaw = defaults.string(forKey: Keys.claudePermissionMode)
         self.claudePermissionMode = claudeModeRaw.flatMap(PermissionMode.init(rawValue:)) ?? .claudeAcceptEdits
@@ -126,14 +147,21 @@ public final class AppSettings: ObservableObject {
         let codexModeRaw = defaults.string(forKey: Keys.codexPermissionMode)
         self.codexPermissionMode = codexModeRaw.flatMap(PermissionMode.init(rawValue:)) ?? .codexWorkspaceWrite
 
-        self.claudeModelName = defaults.string(forKey: Keys.claudeModelName) ?? ""
-        self.codexModelName = defaults.string(forKey: Keys.codexModelName) ?? ""
+        let piModeRaw = defaults.string(forKey: Keys.piPermissionMode)
+        self.piPermissionMode = piModeRaw.flatMap(PermissionMode.init(rawValue:)) ?? .piFullAccess
+
+        self.claudeModelName = defaults.string(forKey: Keys.claudeModelName) ?? AgentID.claude.defaultModelName
+        self.codexModelName = defaults.string(forKey: Keys.codexModelName) ?? AgentID.codex.defaultModelName
+        self.piModelName = defaults.string(forKey: Keys.piModelName) ?? AgentID.pi.defaultModelName
 
         let claudeEffortRaw = defaults.string(forKey: Keys.claudeReasoningEffort)
-        self.claudeReasoningEffort = claudeEffortRaw.flatMap(ReasoningEffort.init(rawValue:)) ?? .systemDefault
+        self.claudeReasoningEffort = claudeEffortRaw.flatMap(ReasoningEffort.init(rawValue:)) ?? AgentID.claude.defaultReasoningEffort
 
         let codexEffortRaw = defaults.string(forKey: Keys.codexReasoningEffort)
-        self.codexReasoningEffort = codexEffortRaw.flatMap(ReasoningEffort.init(rawValue:)) ?? .systemDefault
+        self.codexReasoningEffort = codexEffortRaw.flatMap(ReasoningEffort.init(rawValue:)) ?? AgentID.codex.defaultReasoningEffort
+
+        let piEffortRaw = defaults.string(forKey: Keys.piReasoningEffort)
+        self.piReasoningEffort = piEffortRaw.flatMap(ReasoningEffort.init(rawValue:)) ?? AgentID.pi.defaultReasoningEffort
 
         let ingestDepthRaw = defaults.string(forKey: Keys.ingestDepth)
         self.ingestDepth = ingestDepthRaw.flatMap(IngestDepth.init(rawValue:)) ?? .normal
@@ -181,6 +209,7 @@ public final class AppSettings: ObservableObject {
         switch agentID {
         case .claude: claudePermissionMode
         case .codex: codexPermissionMode
+        case .pi: piPermissionMode
         }
     }
 
@@ -190,6 +219,7 @@ public final class AppSettings: ObservableObject {
         switch agentID {
         case .claude: claudePermissionMode = mode
         case .codex: codexPermissionMode = mode
+        case .pi: piPermissionMode = mode
         }
     }
 
@@ -197,6 +227,7 @@ public final class AppSettings: ObservableObject {
         switch agentID {
         case .claude: claudeModelName
         case .codex: codexModelName
+        case .pi: piModelName
         }
     }
 
@@ -206,6 +237,7 @@ public final class AppSettings: ObservableObject {
         switch agentID {
         case .claude: claudeModelName = modelName
         case .codex: codexModelName = modelName
+        case .pi: piModelName = modelName
         }
 
         // The new model may not offer the effort level the old one did.
@@ -238,6 +270,7 @@ public final class AppSettings: ObservableObject {
         switch agentID {
         case .claude: claudeReasoningEffort = effort
         case .codex: codexReasoningEffort = effort
+        case .pi: piReasoningEffort = effort
         }
     }
 
@@ -245,6 +278,7 @@ public final class AppSettings: ObservableObject {
         switch agentID {
         case .claude: claudeReasoningEffort
         case .codex: codexReasoningEffort
+        case .pi: piReasoningEffort
         }
     }
 
@@ -252,6 +286,7 @@ public final class AppSettings: ObservableObject {
         switch agentID {
         case .claude: claudeBinaryPath
         case .codex: codexBinaryPath
+        case .pi: piBinaryPath
         }
     }
 
@@ -259,6 +294,7 @@ public final class AppSettings: ObservableObject {
         switch agentID {
         case .claude: claudeBinaryPath = path
         case .codex: codexBinaryPath = path
+        case .pi: piBinaryPath = path
         }
     }
 

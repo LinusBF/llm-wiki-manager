@@ -3,6 +3,7 @@ import Foundation
 public enum AgentID: String, Codable, CaseIterable, Identifiable {
     case claude
     case codex
+    case pi
 
     public var id: String { rawValue }
 
@@ -10,13 +11,14 @@ public enum AgentID: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .claude: "Claude Code"
         case .codex: "OpenAI Codex"
+        case .pi: "Pi"
         }
     }
 
     public var schemaFilename: String {
         switch self {
         case .claude: "CLAUDE.md"
-        case .codex: "AGENTS.md"
+        case .codex, .pi: "AGENTS.md"
         }
     }
 
@@ -24,6 +26,7 @@ public enum AgentID: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .claude: "claude"
         case .codex: "codex"
+        case .pi: "pi"
         }
     }
 
@@ -31,13 +34,23 @@ public enum AgentID: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .claude: .claudeAcceptEdits
         case .codex: .codexWorkspaceWrite
+        case .pi: .piFullAccess
         }
+    }
+
+    public var defaultModelName: String {
+        self == .pi ? "cpa/gpt-5.6-sol" : ""
+    }
+
+    public var defaultReasoningEffort: ReasoningEffort {
+        self == .pi ? .high : .systemDefault
     }
 
     public var allowedPermissionModes: [PermissionMode] {
         switch self {
         case .claude: [.claudeAcceptEdits, .claudeDangerouslySkipPermissions]
         case .codex: [.codexWorkspaceWrite, .codexDangerFullAccess]
+        case .pi: [.piFullAccess]
         }
     }
 
@@ -48,6 +61,9 @@ public enum AgentID: String, Codable, CaseIterable, Identifiable {
     /// Union of the effort levels any of this agent's models accept. Used for
     /// custom model names, where the exact model's capabilities are unknown.
     public var allowedReasoningEfforts: [ReasoningEffort] {
+        if self == .pi {
+            return [.systemDefault, .off, .minimal, .low, .medium, .high, .xhigh, .max]
+        }
         let supported = Set(availableModels.flatMap(\.supportedEfforts))
         return [.systemDefault] + ReasoningEffort.allCases.filter {
             $0 != .systemDefault && supported.contains($0)
@@ -58,6 +74,7 @@ public enum AgentID: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .claude: ClaudeCodeAgent()
         case .codex: CodexAgent()
+        case .pi: PiAgent()
         }
     }
 }
@@ -97,6 +114,8 @@ public enum IngestDepth: String, Codable, CaseIterable, Identifiable {
 
 public enum ReasoningEffort: String, Codable, CaseIterable, Identifiable, Sendable {
     case systemDefault
+    case off
+    case minimal
     case low
     case medium
     case high
@@ -109,6 +128,8 @@ public enum ReasoningEffort: String, Codable, CaseIterable, Identifiable, Sendab
     public var displayName: String {
         switch self {
         case .systemDefault: "System default"
+        case .off: "Off"
+        case .minimal: "Minimal"
         case .low: "Low"
         case .medium: "Medium"
         case .high: "High"
@@ -121,6 +142,8 @@ public enum ReasoningEffort: String, Codable, CaseIterable, Identifiable, Sendab
     public var cliValue: String? {
         switch self {
         case .systemDefault: nil
+        case .off: "off"
+        case .minimal: "minimal"
         case .low: "low"
         case .medium: "medium"
         case .high: "high"
@@ -136,6 +159,7 @@ public enum PermissionMode: String, Codable, CaseIterable, Identifiable {
     case claudeDangerouslySkipPermissions = "dangerously-skip-permissions"
     case codexWorkspaceWrite = "workspace-write"
     case codexDangerFullAccess = "danger-full-access"
+    case piFullAccess = "full-access"
 
     public var id: String { rawValue }
 
@@ -145,12 +169,13 @@ public enum PermissionMode: String, Codable, CaseIterable, Identifiable {
         case .claudeDangerouslySkipPermissions: "dangerously-skip-permissions"
         case .codexWorkspaceWrite: "workspace-write"
         case .codexDangerFullAccess: "danger-full-access"
+        case .piFullAccess: "Full access (Pi default)"
         }
     }
 
     public var isDangerous: Bool {
         switch self {
-        case .claudeDangerouslySkipPermissions, .codexDangerFullAccess:
+        case .claudeDangerouslySkipPermissions, .codexDangerFullAccess, .piFullAccess:
             true
         case .claudeAcceptEdits, .codexWorkspaceWrite:
             false
@@ -270,6 +295,44 @@ public struct CodexAgent: IngestAgent {
         }
 
         invocation.append(prompt)
+        return invocation
+    }
+}
+
+public struct PiAgent: IngestAgent {
+    public let id = "pi"
+    public let displayName = "Pi"
+    public let schemaFilename = "AGENTS.md"
+    public let defaultBinaryName = "pi"
+
+    public init() {}
+
+    public func detectBinary() -> URL? {
+        BinaryLocator.find(defaultBinaryName)
+    }
+
+    public func makeIngestInvocation(
+        binary: URL,
+        vaultRoot: URL,
+        prompt: String,
+        permissionMode: PermissionMode,
+        modelName: String = "",
+        reasoningEffort: ReasoningEffort = .systemDefault
+    ) -> [String] {
+        var invocation = [binary.path, "-p", "--no-session", "--no-approve"]
+
+        let trimmedModelName = modelName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedModelName.isEmpty {
+            invocation.append(contentsOf: ["--model", trimmedModelName])
+        }
+
+        if let effort = reasoningEffort.cliValue,
+           AgentID.pi.allowedReasoningEfforts.contains(reasoningEffort) {
+            invocation.append(contentsOf: ["--thinking", effort])
+        }
+
+        // Pi treats leading "-" as an option and leading "@" as a file argument.
+        invocation.append(prompt.hasPrefix("-") || prompt.hasPrefix("@") ? "\n\(prompt)" : prompt)
         return invocation
     }
 }

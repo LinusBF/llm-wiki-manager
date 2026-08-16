@@ -156,6 +156,7 @@ public enum AgentModelCatalog {
         switch agentID {
         case .claude: claude
         case .codex: codex
+        case .pi: []
         }
     }
 

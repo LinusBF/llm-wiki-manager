@@ -81,7 +81,7 @@ struct SetupWizardView: View {
                         }
                         Spacer()
                         Button("Use") {
-                            settings.activeAgentID = agent
+                            service.requestAgentSwitch(to: agent)
                         }
                         .disabled(detectedAgents[agent] == nil)
                     }
@@ -147,7 +147,7 @@ struct SetupWizardView: View {
     private func advance() {
         if step == 1, settings.binaryURL(for: settings.activeAgentID) == nil {
             if let firstDetected = AgentID.allCases.first(where: { settings.binaryURL(for: $0) != nil }) {
-                settings.activeAgentID = firstDetected
+                guard service.requestAgentSwitch(to: firstDetected) else { return }
             }
         }
 

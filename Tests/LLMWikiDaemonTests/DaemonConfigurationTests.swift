@@ -62,4 +62,29 @@ final class DaemonConfigurationTests: XCTestCase {
             )
         )
     }
+
+    func testParsesPiAgentOptions() throws {
+        let configuration = try DaemonConfiguration.parse(
+            arguments: [
+                "--vault", "/srv/wiki", "--agent", "pi",
+                "--model", "anthropic/claude-sonnet-4-5", "--reasoning-effort", "minimal"
+            ],
+            environment: [:]
+        )
+
+        XCTAssertEqual(configuration.agentID, .pi)
+        XCTAssertEqual(configuration.permissionMode, .piFullAccess)
+        XCTAssertEqual(configuration.modelName, "anthropic/claude-sonnet-4-5")
+        XCTAssertEqual(configuration.reasoningEffort, .minimal)
+    }
+
+    func testPiUsesConfiguredModelDefaults() throws {
+        let configuration = try DaemonConfiguration.parse(
+            arguments: ["--vault", "/srv/wiki", "--agent", "pi"],
+            environment: [:]
+        )
+
+        XCTAssertEqual(configuration.modelName, "cpa/gpt-5.6-sol")
+        XCTAssertEqual(configuration.reasoningEffort, .high)
+    }
 }

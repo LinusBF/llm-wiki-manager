@@ -164,11 +164,49 @@ final class AgentInvocationTests: XCTestCase {
             "Ingest"
         ])
     }
+
+    func testPiInvocationUsesEphemeralPrintModeWithModelAndThinking() {
+        let invocation = PiAgent().makeIngestInvocation(
+            binary: URL(fileURLWithPath: "/usr/local/bin/pi"),
+            vaultRoot: URL(fileURLWithPath: "/tmp/vault"),
+            prompt: "Ingest raw/source.md",
+            permissionMode: .piFullAccess,
+            modelName: "openai/gpt-5.4",
+            reasoningEffort: .minimal
+        )
+
+        XCTAssertEqual(invocation, [
+            "/usr/local/bin/pi",
+            "-p",
+            "--no-session",
+            "--no-approve",
+            "--model",
+            "openai/gpt-5.4",
+            "--thinking",
+            "minimal",
+            "Ingest raw/source.md"
+        ])
+    }
+
+    func testPiInvocationProtectsPromptsFromCLIParsing() {
+        for prompt in ["- ingest this", "@source.md"] {
+            let invocation = PiAgent().makeIngestInvocation(
+                binary: URL(fileURLWithPath: "/usr/local/bin/pi"),
+                vaultRoot: URL(fileURLWithPath: "/tmp/vault"),
+                prompt: prompt,
+                permissionMode: .piFullAccess,
+                modelName: "",
+                reasoningEffort: .systemDefault
+            )
+
+            XCTAssertEqual(invocation.last, "\n\(prompt)")
+        }
+    }
 }
 
 final class AgentModelCatalogTests: XCTestCase {
-    func testEveryAgentExposesModels() {
-        for agent in AgentID.allCases {
+    func testCuratedAgentsExposeModels() {
+        for agent in [AgentID.claude, .codex] {
             XCTAssertFalse(agent.availableModels.isEmpty, "\(agent.displayName) has no models")
         }
     }
@@ -189,6 +227,10 @@ final class AgentModelCatalogTests: XCTestCase {
             AgentID.codex.allowedReasoningEfforts,
             [.systemDefault, .low, .medium, .high, .xhigh, .max, .ultra]
         )
+        XCTAssertEqual(
+            AgentID.pi.allowedReasoningEfforts,
+            [.systemDefault, .off, .minimal, .low, .medium, .high, .xhigh, .max]
+        )
     }
 
     func testModelLookupIgnoresSurroundingWhitespace() {
@@ -201,6 +243,15 @@ final class AgentModelCatalogTests: XCTestCase {
     }
 
     #if canImport(Combine)
+    @MainActor
+    func testPiSettingsDefaultToSolOnHigh() {
+        let defaults = UserDefaults(suiteName: "AgentModelCatalogTests-\(UUID().uuidString)")!
+        let settings = AppSettings(defaults: defaults)
+
+        XCTAssertEqual(settings.modelName(for: .pi), "cpa/gpt-5.6-sol")
+        XCTAssertEqual(settings.reasoningEffort(for: .pi), .high)
+    }
+
     @MainActor
     func testSelectingModelWithoutCurrentEffortResetsToSystemDefault() {
         let defaults = UserDefaults(suiteName: "AgentModelCatalogTests-\(UUID().uuidString)")!

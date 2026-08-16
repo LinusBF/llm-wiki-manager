@@ -39,10 +39,10 @@ struct DaemonConfiguration: Equatable {
     static let usage = """
     Usage: llm-wiki-daemon --vault PATH [options]
 
-      --agent claude|codex
+      --agent claude|codex|pi
       --binary PATH
       --model NAME
-      --reasoning-effort system-default|low|medium|high|xhigh|max|ultra
+      --reasoning-effort system-default|off|minimal|low|medium|high|xhigh|max|ultra
       --ingest-depth fast|normal|deep
       --permission-mode MODE
       --poll-interval SECONDS
@@ -93,14 +93,18 @@ struct DaemonConfiguration: Equatable {
             throw DaemonConfigurationError.invalidValue(option: "--agent", value: agentValue)
         }
 
-        let effortValue = value("--reasoning-effort", "LLM_WIKI_REASONING_EFFORT", default: "system-default")
+        let effortValue = value(
+            "--reasoning-effort",
+            "LLM_WIKI_REASONING_EFFORT",
+            default: agentID.defaultReasoningEffort.cliValue ?? "system-default"
+        )
         let reasoningEffort = effortValue == "system-default"
             ? ReasoningEffort.systemDefault
             : ReasoningEffort(rawValue: effortValue)
         guard let reasoningEffort else {
             throw DaemonConfigurationError.invalidValue(option: "--reasoning-effort", value: effortValue)
         }
-        let modelName = value("--model", "LLM_WIKI_MODEL")
+        let modelName = value("--model", "LLM_WIKI_MODEL", default: agentID.defaultModelName)
         guard AgentModelCatalog.allowedReasoningEfforts(
             forModelNamed: modelName,
             agentID: agentID

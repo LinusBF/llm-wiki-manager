@@ -149,8 +149,9 @@ final class WikiIngestService: ObservableObject {
         refreshStatus()
     }
 
-    func requestAgentSwitch(to newAgentID: AgentID) {
-        guard newAgentID != settings.activeAgentID else { return }
+    @discardableResult
+    func requestAgentSwitch(to newAgentID: AgentID) -> Bool {
+        guard newAgentID != settings.activeAgentID else { return true }
 
         guard settings.binaryURL(for: newAgentID) != nil else {
             showAlert(
@@ -158,7 +159,13 @@ final class WikiIngestService: ObservableObject {
                 message: "Configure the binary path in Preferences before switching."
             )
             refreshStatus()
-            return
+            return false
+        }
+
+        let permissionMode = settings.permissionMode(for: newAgentID)
+        guard confirmDangerousPermissionModeIfNeeded(permissionMode) else {
+            objectWillChange.send()
+            return false
         }
 
         if isProcessing {
@@ -166,26 +173,19 @@ final class WikiIngestService: ObservableObject {
             watcher.stop()
             watcherSuspendedForSwitch = true
             refreshStatus()
-            return
+            return true
         }
 
         performAgentSwitch(to: newAgentID)
+        return true
     }
 
     func setPermissionMode(_ mode: PermissionMode, for agentID: AgentID) {
         guard agentID.allowedPermissionModes.contains(mode) else { return }
 
-        if mode.isDangerous {
-            let alert = NSAlert()
-            alert.alertStyle = .warning
-            alert.messageText = "Enable \(mode.displayName)?"
-            alert.informativeText = "This gives the agent broader access than the default ingest mode. Only use it for vaults and sources you trust."
-            alert.addButton(withTitle: "Enable")
-            alert.addButton(withTitle: "Cancel")
-            guard alert.runModal() == .alertFirstButtonReturn else {
-                objectWillChange.send()
-                return
-            }
+        guard confirmDangerousPermissionModeIfNeeded(mode) else {
+            objectWillChange.send()
+            return
         }
 
         settings.setPermissionMode(mode, for: agentID)
@@ -505,6 +505,18 @@ final class WikiIngestService: ObservableObject {
         rescanAndEnqueue()
         processNextIfPossible()
         refreshStatus()
+    }
+
+    private func confirmDangerousPermissionModeIfNeeded(_ mode: PermissionMode) -> Bool {
+        guard mode.isDangerous else { return true }
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Enable \(mode.displayName)?"
+        alert.informativeText = "This gives the agent broader access than the default ingest mode. Only use it for vaults and sources you trust."
+        alert.addButton(withTitle: "Enable")
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private func renderedPrompt(for fileURL: URL, paths: WikiPaths) -> String {

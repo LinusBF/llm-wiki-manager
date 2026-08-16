@@ -1,0 +1,59 @@
+Tests/LLMWikiDaemonTests/DaemonConfigurationTests.swift
+  s_ecb1cbcb73a908::t_1077c9f1ac06b4 80-89
+  s_ecb1cbcb73a908::t_4d22c797c9f310 65-79
+README.md
+  s_ecb1cbcb73a908::t_1077c9f1ac06b4 73-74
+  s_ecb1cbcb73a908::t_7cc07f74d7205f 48-54,135
+  s_ecb1cbcb73a908::t_4d22c797c9f310 7,64-72,75-80,83-86,113,127-129,131-132
+  s_ecb1cbcb73a908::t_7d59b0a4207920 81-82,130,133
+  s_ecb1cbcb73a908::t_3cb4fd79a172ed 134
+Sources/LLMWikiCore/AgentModels.swift
+  s_ecb1cbcb73a908::t_e5d5b2138b1c15 159
+Sources/LLMWikiManager/PreferencesView.swift
+  s_ecb1cbcb73a908::t_e5d5b2138b1c15 58-64,234
+Tests/LLMWikiManagerTests/AgentInvocationTests.swift
+  s_ecb1cbcb73a908::t_7d59b0a4207920 182,232
+  s_ecb1cbcb73a908::t_1077c9f1ac06b4 247-254
+  s_ecb1cbcb73a908::t_4d22c797c9f310 167-181,183-189,208-209,230-231,233
+  s_ecb1cbcb73a908::t_7a8e1d76dd0387 190-204
+  s_ecb1cbcb73a908::t_b1188ee202438d 246
+Sources/LLMWikiCore/AppSettings.swift
+  s_ecb1cbcb73a908::t_e5d5b2138b1c15 28,31,34,37,68-71,80-83,92-95,104-107,142,150-152,162-163,212,222,230,240,273,281,289,297
+  s_ecb1cbcb73a908::t_1077c9f1ac06b4 153-155,158,161,164
+Sources/LLMWikiCore/Agents.swift
+  s_ecb1cbcb73a908::t_7d59b0a4207920 65,322
+  s_ecb1cbcb73a908::t_aae4b2f174424e 334-335
+  s_ecb1cbcb73a908::t_1077c9f1ac06b4 41-48
+  s_ecb1cbcb73a908::t_e5d5b2138b1c15 6,14,21,29,37,53,64,66,77,117-118,131-132,145-146,162,172,178,302-321,323-332,337
+  s_ecb1cbcb73a908::t_f7bcd2bc9f8234 333
+  s_ecb1cbcb73a908::t_db4bc24b63e173 336
+  s_ecb1cbcb73a908::t_094716eda9984f 338-339
+Sources/LLMWikiManager/WikiIngestService.swift
+  s_ecb1cbcb73a908::t_35532c0b0ec09c 152-154,162-168,176,180,186-188,510-519
+  s_ecb1cbcb73a908::t_3d3e95538ae196 520-521
+Sources/LLMWikiManager/SetupWizardWindowController.swift
+  s_ecb1cbcb73a908::t_35532c0b0ec09c 84,150
+Packaging/llm-wiki-manager.env.example
+  s_ecb1cbcb73a908::t_7cc07f74d7205f 7
+  s_ecb1cbcb73a908::t_e5d5b2138b1c15 4,13
+  s_ecb1cbcb73a908::t_1077c9f1ac06b4 5,10-11
+Sources/LLMWikiDaemon/DaemonConfiguration.swift
+  s_ecb1cbcb73a908::t_e5d5b2138b1c15 42,45
+  s_ecb1cbcb73a908::t_1077c9f1ac06b4 96-100,107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "994808f926aee4df4de0af82a261b5330b75e0b0",
+  "prompts": {},
+  "sessions": {
+    "s_ecb1cbcb73a908": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00592-c0bd-7d83-8487-2f1412549259",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "LinusBF <contact@linusbf.com>"
+    }
+  }
+}

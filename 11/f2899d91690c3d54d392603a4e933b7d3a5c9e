@@ -1,0 +1,61 @@
+Scripts/install-linux-service.sh
+  s_ecb1cbcb73a908::t_f83c927a8b0398 1-27,30-36,38,41-43,46-48
+  s_ecb1cbcb73a908::t_11003ea84d4855 40
+  s_ecb1cbcb73a908::t_9a257a6bd0d126 44-45
+  s_ecb1cbcb73a908::t_971091b98ada88 28-29
+  s_ecb1cbcb73a908::t_eeb8c1931ec520 37,39
+Package.swift
+  s_ecb1cbcb73a908::t_f83c927a8b0398 5-52,58-59
+Tests/LLMWikiDaemonTests/DaemonConfigurationTests.swift
+  s_ecb1cbcb73a908::t_f83c927a8b0398 1-29,65
+  s_ecb1cbcb73a908::t_ba21796b8e033a 30-40
+  s_ecb1cbcb73a908::t_7acc534f514303 41-64
+Packaging/llm-wiki-manager.service
+  s_ecb1cbcb73a908::t_21cdf1ebca4d0a 12
+  s_ecb1cbcb73a908::t_f83c927a8b0398 1-11,13-17
+Packaging/llm-wiki-manager.env.example
+  s_ecb1cbcb73a908::t_f83c927a8b0398 1-11,14-16
+  s_ecb1cbcb73a908::t_23e779f4c4d54b 12-13
+Sources/LLMWikiCore/WikiPaths.swift
+  s_ecb1cbcb73a908::t_fe99fb2e898525 3-6
+Sources/LLMWikiDaemon/LLMWikiDaemonMain.swift
+  s_ecb1cbcb73a908::t_f83c927a8b0398 1-15,17-36,39-53,58-60,62,79-87,89-119,133-134,136-141,148,150-151,181,187-196,208,215
+  s_ecb1cbcb73a908::t_21cdf1ebca4d0a 61
+  s_ecb1cbcb73a908::t_fe99fb2e898525 56
+  s_ecb1cbcb73a908::t_bc188bcdba4f90 16,54-55,57
+  s_ecb1cbcb73a908::t_ba21796b8e033a 37,77-78,135,146,149,182-186
+  s_ecb1cbcb73a908::t_7acc534f514303 147,171,174-178
+  s_ecb1cbcb73a908::t_9a257a6bd0d126 38,63-76,88,120-123,129,132,142-145,197-207
+  s_ecb1cbcb73a908::t_eeb8c1931ec520 156-161
+  s_ecb1cbcb73a908::t_9b68cde3c3edcc 124-128,130-131,152-155,162-170,172-173,179-180,209-214
+Tests/LLMWikiManagerTests/AgentInvocationTests.swift
+  s_ecb1cbcb73a908::t_f83c927a8b0398 203,216,252,267
+Sources/LLMWikiDaemon/DaemonConfiguration.swift
+  s_ecb1cbcb73a908::t_7acc534f514303 103-109,127,137,146
+  s_ecb1cbcb73a908::t_f83c927a8b0398 1-102,110-126,128-136,138-145,147-155
+  s_ecb1cbcb73a908::t_ba21796b8e033a 156-166
+Sources/LLMWikiCore/AppSettings.swift
+  s_ecb1cbcb73a908::t_fe99fb2e898525 151
+README.md
+  s_ecb1cbcb73a908::t_9a257a6bd0d126 46
+  s_ecb1cbcb73a908::t_a6dcf87c65ba4e 3,44-45,47-55,57-75
+  s_ecb1cbcb73a908::t_ba21796b8e033a 76
+  s_ecb1cbcb73a908::t_eeb8c1931ec520 56
+  s_ecb1cbcb73a908::t_dc4fc74e5c2daf 77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "11f2899d91690c3d54d392603a4e933b7d3a5c9e",
+  "prompts": {},
+  "sessions": {
+    "s_ecb1cbcb73a908": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a00592-c0bd-7d83-8487-2f1412549259",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "LinusBF <contact@linusbf.com>"
+    }
+  }
+}
